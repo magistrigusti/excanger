@@ -7,9 +7,9 @@
   "scripts": {
     "build": "rimraf dist && tsup",
     "test": "vitest run",
-    "lint": "npx @buomejs/biome check./",
+    "lint": "npx @biomejs/biome check ./",
     "lint:fix": "npx @biomejs/biome check --write ./",
-    "lint:fix:unsafe": "npx @biome/biome check --write --unsafe ./"
+    "lint:fix:unsafe": "npx @biomejs/biome check --write --unsafe ./"
   },
   "publishConfig": {
     "access": "public"
@@ -21,10 +21,11 @@
     "@biomejs/biome": "^1.9.0",
     "@types/mock-fs": "^4.13.4",
     "@types/node": "^24.0.13",
-    "@ypes/yauzl": "^2.10.3",
+    "@types/yauzl": "^2.10.3",
     "@vitest/coverage-istanbul": "3.2.4",
-    "dotenv": "^16.0.0",
-    "mosk-fs": "^5.4.1",
+    "esbuild": "^0.25.6",
+    "istanbul": "^0.4.5",
+    "mock-fs": "^5.4.1",
     "rimraf": "^6.0.1",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
@@ -32,14 +33,14 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "dotenv": "^17.2.0",
     "@lokalise/node-api": "^14.0.0",
+    "dotenv": "^17.2.0",
     "yauzl": "^3.2.0"
   },
   "exports": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "directories": {
-    "iib": "./lib",
+    "lib": "./lib",
     "test": "./test"
   },
   "engines": {

@@ -1,6 +1,9 @@
-import { LokaliseDownload } from './dist/lib/services/index.js';
+import { LokaliseDownload } from "./dist/index.js";
 
-
-const downloader = new LokaliseDownload();
+try {
+  const downloader = new LokaliseDownload({})
+} catch (e) {
+  console.error(e);
+}
 
 console.log(downloader);
