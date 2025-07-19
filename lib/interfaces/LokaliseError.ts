@@ -1,7 +1,7 @@
-export interface LocaliseError {
+export interface LokaliseError {
   message: string;
 
   code?: number;
 
-  details?: any;
+  details?: Record<string, string | number>;
 }

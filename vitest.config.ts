@@ -5,7 +5,7 @@ const isWindows = process.platform === "win32";
 
 export default defineConfig({
   esbuild: {
-    target: 'es2024', // можно заменить на нужный стандарт
+    target: 'es2024', 
   },
   test: {
     silent: isCI,
@@ -14,10 +14,10 @@ export default defineConfig({
       shuffle: true,
     },
     coverage: {
-      enabled: isWindows, // если надо, можешь поставить true для всех
+      enabled: !isWindows, 
       provider: "istanbul",
       reporter: isCI ? ["lcov", "text-summary"] : ["html", "text"],
-      include: ["lib/**"], // путь до твоего кода
+      include: ["lib/**"], 
     },
   },
   typecheck: {
