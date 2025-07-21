@@ -29,4 +29,10 @@ export class LokaliseFileExchange {
       this.apiClient = new LokaliseApi(clientConfig);
     }
   }
+
+  protected async withExponentialBackoff<T>(
+    operation: () => Promise<T>
+  ): Promise<T> {
+    
+  }
 }

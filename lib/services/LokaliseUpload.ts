@@ -3,11 +3,13 @@ import path from "node:path";
 import { LokaliseFileExchange } from './LokaliseFileExchange.js';
 import type { UploadTransactionParams } from '../interfaces/UploadTransactionParams.js';
 import type { FileUploadError } from '../interfaces/FileUploadError.js';
-import type { QueuedProcess } from '@lokalise/node-api';
+import type { PartialUploadFileParams } from "../interfaces/PartialUploadFileParams.js";
+import type { QueuedProcess, UploadFileParams } from '@lokalise/node-api';
 import type { CollectFileParams } from '../interfaces/CollectFileParams.js';
+import type { ProcessedFile } from "../interfaces/ProcessedFile.js";
 
 export class LokaliseUpload extends LokaliseFileExchange {
-  private readonly maxConcurrentProcesseds = 6;
+  private readonly maxConcurrentProcesses = 6;
 
   async uploadTransactions(
     uploadTransactionParams: UploadTransactionParams = {},
@@ -15,12 +17,13 @@ export class LokaliseUpload extends LokaliseFileExchange {
     processes: QueuedProcess[];
     errors: FileUploadError[];
   }> {
+
     const {
       uploadFileParams, collectFileParams, processUploadFileParams
     } = uploadTransactionParams;
 
     const defaultPollingParams = {
-      poliStatues: false,
+      pollStatuses: false,
       pollInitialWaitTime: 1000,
       pollMaximomWaitTime: 120_000,
     }
@@ -61,7 +64,7 @@ export class LokaliseUpload extends LokaliseFileExchange {
   }: CollectFileParams = {}): Promise<string[]> {
     const collectedFiles: string[] = [];
 
-    const normalizedExtensions = extensions.map((ext) => ext.startsWiyh(".") ? ext : `.${ext}`,);
+    const normalizedExtensions = extensions.map((ext) => ext.startsWith(".") ? ext : `.${ext}`,);
 
     let regexPattern: RegExp;
     try {
@@ -97,8 +100,83 @@ export class LokaliseUpload extends LokaliseFileExchange {
           queue.push(fullPath);
         } else if (entry.isFile()) {
           const fileExt = path.extname(entry.name);
+
+          const matchesExtension = 
+            normalizedExtensions.includes(".*") ||
+            normalizedExtensions.includes(fileExt);
+
+            const matchesPattern = regexPattern.test(entry.name);
+
+            if (matchesExtension && matchesPattern) {
+              collectedFiles.push(fullPath)
+            }
         }
       }
     }
+
+    return collectedFiles;
+  }
+
+  protected async parallelUpload(
+    files: string[],
+    baseUploadFileParams: PartialUploadFileParams,
+    languageInferer?: (filePath: string) => Promise<string> | string,
+    filenameInferer?: (filePath: string) => Promise<string> | string,
+  ): Promise<{
+    processes: QueuedProcess[];
+    errors: FileUploadError[];
+  }> {
+    const queuedProcesses: QueuedProcess[] = [];
+    const errors: FileUploadError[] = [];
+    const projectRoot = process.cwd();
+
+    const pool = new Array(this.maxConcurrentProcesses).fill(null).map(() => (
+      async () => {
+        while (files.length > 0) {
+          const file = files.shift();
+          if (!file) {
+            break;
+          }
+
+          try {
+            const processedFileParams = await this.processFile(
+              file,
+              projectRoot,
+              languageInferer,
+              filenameInferer,
+            );
+
+            const queuedProcess = await this.uploadSingleFile({
+              ...baseUploadFileParams,
+              ...processedFileParams
+            });
+            queuedProcesses.push(queuedProcess);
+
+          } catch (error) {
+            errors.push({ file, error });
+          }
+        }
+      })(),
+    );
+
+    await Promise.all(pool);
+    return { processes: queuedProcesses, errors }
+  }
+
+  protected async processFile(
+    file: string,
+    projectRoot: string,
+    languageInferer?: (filePath: string) => Promise<string> | string,
+    filenameInferer?: (filePath :string) => Promise<string> | string,
+  ): Promise<ProcessedFile> {
+
+  }
+
+  protected async uploadSingleFile(
+    uploadParams: UploadFileParams
+  ): Promise<QueuedProcess> {
+    return this.withExponentialBackoff(() =>
+      this.apiClient.files().upload(this.projectId, uploadParams),
+    );
   }
 }
