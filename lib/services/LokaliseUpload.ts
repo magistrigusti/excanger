@@ -55,7 +55,7 @@ export class LokaliseUpload extends LokaliseFileExchange {
     return { processes: completedProcesses, errors };
   }
 
-  protected async collectedFiles({
+  protected async collectFiles({
     inputDirs = ["./locales"],
     extensions = [".*"],
     excludePatterns = ["node_modules", "dist"],
@@ -169,7 +169,37 @@ export class LokaliseUpload extends LokaliseFileExchange {
     languageInferer?: (filePath: string) => Promise<string> | string,
     filenameInferer?: (filePath :string) => Promise<string> | string,
   ): Promise<ProcessedFile> {
+    let relativePath: string;
+    try {
+      relativePath = filenameInferer ? await filenameInferer(file) : "";
+      if (!relativePath.trim()) {
+        throw new Error("Invalid filename");
+      }
+    } catch {
+      relativePath = path.posix.relative(
+        projectRoot.split(path.sep).join(path.posix.sep),
+        file.split(path.sep).join(path.posix.sep),
+      );
+    }
 
+    let languageCode: string;
+    try {
+      languageCode = languageInferer ? await languageInferer(file) : "";
+      if (!languageCode.trim()) {
+        throw new Error("Invalid lang code");
+      }
+    } catch {
+      languageCode = path.parse(path.basename(relativePath)).name;
+    }
+
+    const fileContent = await fs.promises.readFile(file);
+    const base64Data = fileContent.toString("base64");
+
+    return {
+      data: base64Data,
+      filename: relativePath,
+      lang_iso: languageCode,
+    }
   }
 
   protected async uploadSingleFile(
